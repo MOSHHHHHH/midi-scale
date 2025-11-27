@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>אימון סולמות בפסנתר</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --success: #22c55e;
+            --error: #ef4444;
+            --bg: #f8fafc;
+            --card: #ffffff;
+            --text: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background: var(--card);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            width: 100%;
+            max-width: 600px;
+            text-align: center;
+            min-height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+            overflow: hidden;
+        }
+
+        h1 { margin-top: 0; font-size: 1.8rem; margin-bottom: 0.5rem; }
+        h2 { font-size: 1.25rem; color: #64748b; margin-bottom: 1.5rem; }
+        p { line-height: 1.6; margin-bottom: 1rem; }
+
+        .btn {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            font-size: 1.1rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            font-weight: 600;
+        }
+
+        .btn:hover { background-color: #2563eb; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .hidden { display: none !important; }
+
+        /* Image styling */
+        .scale-img {
+            max-width: 100%;
+            height: auto;
+            max-height: 150px;
+            margin: 1rem 0;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+        }
+
+        /* Feedback overlays */
+        .feedback {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            font-weight: bold;
+            color: white;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s;
+            z-index: 10;
+        }
+        .feedback.success { background-color: rgba(34, 197, 94, 0.9); }
+        .feedback.error { background-color: rgba(239, 68, 68, 0.9); }
+        .feedback.visible { opacity: 1; }
+
+        /* Specific Degrees Styles */
+        .degrees-container {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin: 1.5rem 0;
+        }
+
+        .degree-box {
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px solid #e2e8f0;
+            border-radius: 0.5rem;
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #94a3b8;
+        }
+
+        .degree-box.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background-color: #eff6ff;
+            transform: scale(1.1);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+        }
+
+        .degree-box.done {
+            background-color: #dcfce7;
+            border-color: var(--success);
+            color: var(--success);
+        }
+
+        .status-text {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--primary);
+            margin-top: 1rem;
+        }
+
+        .copyright {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2rem;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 1rem;
+        }
+
+        .note-display {
+            font-size: 3rem;
+            font-weight: bold;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <!-- Feedback Overlays -->
+    <div id="feedback-success" class="feedback success">כל הכבוד!</div>
+    <div id="feedback-error" class="feedback error">טעות, נסה שוב</div>
+
+    <!-- View: Home -->
+    <div id="view-home">
+        <h1>תרגול סולמות בפסנתר</h1>
+        <p>אפליקציה לתרגול סולמות מז'וריים ומינוריים באמצעות מקלדת MIDI.</p>
+        <p>ודאו שהפסנתר מחובר למחשב לפני ההתחלה.</p>
+        <button id="btn-start" class="btn">התחל אימון</button>
+        <div class="copyright">
+            The images in this app were created by Special-T and are used under the CC BY-SA 4.0 license (https://creativecommons.org/licenses/by-sa/4.0/).
+        </div>
+    </div>
+
+    <!-- View: MIDI Setup -->
+    <div id="view-midi-setup" class="hidden">
+        <h1>בדיקת חיבור MIDI</h1>
+        <p>אנא נגנו תו כלשהו בפסנתר כדי לוודא שהחיבור תקין.</p>
+        <div class="note-display">🎹</div>
+        <p id="midi-status">ממתין לקלט...</p>
+    </div>
+
+    <!-- View: Root Practice -->
+    <div id="view-root" class="hidden">
+        <h2>תרגול תו בסיס (Root)</h2>
+        <div id="root-instruction" class="note-display"></div>
+        <img id="root-img" class="scale-img" src="" alt="Scale Signature">
+        <p>נגנו את תו הבסיס של הסולם המוצג.</p>
+    </div>
+
+    <!-- View: Full Scale Practice -->
+    <div id="view-full-scale" class="hidden">
+        <h2>תרגול סולם מלא</h2>
+        <h3 id="scale-title-full"></h3>
+        <p>נגנו את כל 7 התווים של הסולם (בכל סדר).</p>
+        <div class="status-text" id="full-scale-status">ניגנת 0 מתוך 7 תווים</div>
+        <div style="margin-top: 10px; font-size: 0.9rem; color: #64748b;">
+            חזרות שנותרו: <span id="full-scale-reps">4</span>
+        </div>
+    </div>
+
+    <!-- View: Specific Degrees -->
+    <div id="view-degrees" class="hidden">
+        <h2>תרגול דרגות בסולם</h2>
+        <h3 id="scale-title-degrees"></h3>
+        <p>נגנו את דרגות הסולם לפי הסדר המוצג (משמאל לימין).</p>
+        <div id="degrees-container" class="degrees-container">
+            <!-- Boxes generated by JS -->
+        </div>
+        <div style="margin-top: 10px; font-size: 0.9rem; color: #64748b;">
+            חזרות שנותרו: <span id="degrees-reps">2</span>
+        </div>
+    </div>
+
+</div>
+
+<script>
+    /* --- Data & Constants --- */
+    // Note mapping: C=0, C#=1, D=2...
+    const SCALES_DATA = [
+        { name: "A-flat Major", root: 8, img: "Key_Signature_A-flat_major.jpg" },
+        { name: "A Major", root: 9, img: "Key_Signature_A_major.jpg" },
+        { name: "B-flat Major", root: 10, img: "Key_Signature_B-flat_major.jpg" },
+        { name: "B Major", root: 11, img: "Key_Signature_B_major.jpg" },
+        { name: "C-flat Major", root: 11, img: "Key_Signature_C-flat_major.jpg" }, // Enharmonic B
+        { name: "C Major", root: 0, img: "Key_Signature_C_major.jpg" },
+        { name: "D-flat Major", root: 1, img: "Key_Signature_D-flat_major.jpg" }, // Enharmonic C#
+        { name: "C-sharp Major", root: 1, img: "Key_Signature_of_C-sharp_major.jpg" },
+        { name: "D Major", root: 2, img: "Key_Signature_D_major.jpg" },
+        { name: "E-flat Major", root: 3, img: "Key_Signature_E-flat_major.jpg" },
+        { name: "E Major", root: 4, img: "Key_Signature_E_major.jpg" },
+        { name: "F-sharp Major", root: 6, img: "Key_Signature_F-sharp_major.jpg" },
+        { name: "F Major", root: 5, img: "Key_Signature_F_major.jpg" },
+        { name: "G-flat Major", root: 6, img: "Key_Signature_G-flat_major.jpg" }, // Enharmonic F#
+        { name: "G Major", root: 7, img: "Key_Signature_G_major.jpg" }
+    ];
+
+    // Intervals from root
+    const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
+    const MINOR_INTERVALS = [0, 2, 3, 5, 7, 8, 10]; // Natural minor
+
+    // Hebrew names for Root display
+    const NOTE_NAMES_HE = ["דו", "דו דיאז / רה במול", "רה", "מי במול", "מי", "פה", "פה דיאז / סול במול", "סול", "לה במול", "לה", "סי במול", "סי"];
+
+    /* --- App State --- */
+    const state = {
+        currentView: 'home', // home, midi-setup, root, full-scale, degrees
+        currentScale: null, // Object with {root, type, img, name}
+        scaleNotes: [], // Set of allowed note values (0-11)
+        
+        // Task specific state
+        fullScale: {
+            playedNotes: new Set(),
+            repsLeft: 4
+        },
+        degrees: {
+            sequence: [], // Array of numbers 1-7
+            currentIndex: 0,
+            repsLeft: 2
+        },
+        
+        isProcessing: false // Lock input during feedback
+    };
+
+    /* --- DOM Elements --- */
+    const views = {
+        home: document.getElementById('view-home'),
+        midiSetup: document.getElementById('view-midi-setup'),
+        root: document.getElementById('view-root'),
+        fullScale: document.getElementById('view-full-scale'),
+        degrees: document.getElementById('view-degrees')
+    };
+
+    const feedbackEls = {
+        success: document.getElementById('feedback-success'),
+        error: document.getElementById('feedback-error')
+    };
+
+    /* --- Initialization --- */
+    document.getElementById('btn-start').addEventListener('click', startApp);
+
+    async function startApp() {
+        if (navigator.requestMIDIAccess) {
+            try {
+                const midiAccess = await navigator.requestMIDIAccess();
+                setupMidiInput(midiAccess);
+                switchView('midiSetup');
+            } catch (err) {
+                alert("גישה ל-MIDI נכשלה. אנא ודא שהדפדפן תומך ושיש הרשאות.");
+            }
+        } else {
+            alert("הדפדפן שלך לא תומך ב-Web MIDI API.");
+        }
+    }
+
+    function setupMidiInput(midiAccess) {
+        for (const input of midiAccess.inputs.values()) {
+            input.onmidimessage = handleMidiMessage;
+        }
+        midiAccess.onstatechange = (e) => {
+            // Re-bind if devices change
+            if (e.port.type === 'input' && e.port.state === 'connected') {
+                e.port.onmidimessage = handleMidiMessage;
+            }
+        };
+    }
+
+    function handleMidiMessage(event) {
+        if (state.isProcessing) return;
+
+        const [command, note, velocity] = event.data;
+        
+        // Command 144 is Note On. Ignore if velocity is 0 (some devices send note on vel 0 as note off)
+        if ((command & 0xf0) === 144 && velocity > 0) {
+            const normalizedNote = note % 12; // Ignore octave
+            processInput(normalizedNote);
+        }
+    }
+
+    /* --- Core Logic --- */
+
+    function processInput(note) {
+        switch (state.currentView) {
+            case 'midiSetup':
+                // Any note works
+                showSuccess("מצויין!", () => generateNewTask());
+                break;
+
+            case 'root':
+                checkRootTask(note);
+                break;
+
+            case 'fullScale':
+                checkFullScaleTask(note);
+                break;
+
+            case 'degrees':
+                checkDegreesTask(note);
+                break;
+        }
+    }
+
+    function generateNewTask() {
+        // 1. Pick random scale from data
+        const baseScale = SCALES_DATA[Math.floor(Math.random() * SCALES_DATA.length)];
+        
+        // 2. Decide Major or Minor (50/50)
+        const isMajor = Math.random() > 0.5;
+        
+        // 3. Calculate actual root and notes
+        let actualRoot;
+        let scaleTypeStr;
+        let intervals;
+
+        if (isMajor) {
+            actualRoot = baseScale.root;
+            scaleTypeStr = "מז'ור";
+            intervals = MAJOR_INTERVALS;
+        } else {
+            // Relative Minor: Major Root + 9 semitones (or -3)
+            // Example: C Major (0) -> A Minor (9)
+            actualRoot = (baseScale.root + 9) % 12;
+            scaleTypeStr = "מינור";
+            intervals = MINOR_INTERVALS;
+        }
+
+        // 4. Generate valid note set for this scale
+        const validNotes = intervals.map(interval => (actualRoot + interval) % 12);
+
+        state.currentScale = {
+            name: baseScale.name, // Image name remains based on Major key signature
+            img: `pic/${baseScale.img}`,
+            root: actualRoot,
+            typeStr: scaleTypeStr,
+            isMajor: isMajor
+        };
+        state.scaleNotes = validNotes;
+
+        // Start Root Task
+        setupRootView();
+    }
+
+    /* --- Task: Root --- */
+    function setupRootView() {
+        const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
+        document.getElementById('root-instruction').innerText = title;
+        document.getElementById('root-img').src = state.currentScale.img;
+        switchView('root');
+    }
+
+    function checkRootTask(note) {
+        if (note === state.currentScale.root) {
+            showSuccess("כל הכבוד, תשובה נכונה", setupFullScaleView);
+        } else {
+            showError("טעות, נסה שוב", null); // Stay on page
+        }
+    }
+
+    /* --- Task: Full Scale --- */
+    function setupFullScaleView() {
+        state.fullScale.repsLeft = 4;
+        resetFullScaleRound();
+        
+        const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
+        document.getElementById('scale-title-full').innerText = title;
+        updateFullScaleUI();
+        switchView('fullScale');
+    }
+
+    function resetFullScaleRound() {
+        state.fullScale.playedNotes.clear();
+        updateFullScaleUI();
+    }
+
+    function updateFullScaleUI() {
+        const count = state.fullScale.playedNotes.size;
+        document.getElementById('full-scale-status').innerText = `ניגנת ${count} מתוך 7 תווים בסולם`;
+        document.getElementById('full-scale-reps').innerText = state.fullScale.repsLeft;
+    }
+
+    function checkFullScaleTask(note) {
+        // Check if note is in scale
+        if (state.scaleNotes.includes(note)) {
+            state.fullScale.playedNotes.add(note);
+            updateFullScaleUI();
+
+            if (state.fullScale.playedNotes.size === 7) {
+                // Round Complete
+                state.fullScale.repsLeft--;
+                updateFullScaleUI();
+
+                if (state.fullScale.repsLeft > 0) {
+                    showSuccess("יפה, עוד " + state.fullScale.repsLeft + " פעמים", () => {
+                        resetFullScaleRound();
+                    }, 800); // Shorter delay for intermediate success
+                } else {
+                    showSuccess("כל הכבוד!", setupDegreesView);
+                }
+            }
+        } else {
+            // Wrong note
+            showError("טעות, נסה שוב", () => {
+                state.fullScale.repsLeft = 4; // Reset attempts requirement? Prompt says "User will need to play the scale 4 times from the beginning"
+                resetFullScaleRound();
+                updateFullScaleUI();
+            });
+        }
+    }
+
+    /* --- Task: Specific Degrees --- */
+    function setupDegreesView() {
+        state.degrees.repsLeft = 2;
+        const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
+        document.getElementById('scale-title-degrees').innerText = title;
+        startDegreesRound();
+        switchView('degrees');
+    }
+
+    function startDegreesRound() {
+        // Create random permutation of 1-7
+        const nums = [1, 2, 3, 4, 5, 6, 7];
+        for (let i = nums.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [nums[i], nums[j]] = [nums[j], nums[i]];
+        }
+        state.degrees.sequence = nums;
+        state.degrees.currentIndex = 0;
+        renderDegreesUI();
+    }
+
+    function renderDegreesUI() {
+        const container = document.getElementById('degrees-container');
+        container.innerHTML = '';
+        document.getElementById('degrees-reps').innerText = state.degrees.repsLeft;
+
+        state.degrees.sequence.forEach((num, index) => {
+            const div = document.createElement('div');
+            div.className = 'degree-box';
+            div.innerText = num;
+            
+            if (index < state.degrees.currentIndex) {
+                div.classList.add('done');
+            } else if (index === state.degrees.currentIndex) {
+                div.classList.add('active');
+            }
+            container.appendChild(div);
+        });
+    }
+
+    function checkDegreesTask(note) {
+        // Determine expected note based on degree
+        // Degree 1 = Index 0 in state.scaleNotes (which is sorted? No, need to sort or calculate)
+        
+        // Strategy: state.scaleNotes was generated via intervals.
+        // For Major/Minor intervals, they are always ascending in pitch order relative to root.
+        // So index 0 = Degree 1 (Root), Index 1 = Degree 2, etc.
+        
+        const currentTargetDegree = state.degrees.sequence[state.degrees.currentIndex];
+        const expectedNote = state.scaleNotes[currentTargetDegree - 1]; // 1-based to 0-based
+
+        if (note === expectedNote) {
+            state.degrees.currentIndex++;
+            renderDegreesUI();
+
+            if (state.degrees.currentIndex >= 7) {
+                // Round complete
+                state.degrees.repsLeft--;
+                
+                if (state.degrees.repsLeft > 0) {
+                    showSuccess("יפה!", () => {
+                        startDegreesRound();
+                    }, 800);
+                } else {
+                    showSuccess("כל הכבוד!", () => {
+                        switchView('home');
+                    });
+                }
+            }
+        } else {
+            showError("טעות, נסה שוב", () => {
+                state.degrees.repsLeft = 2; // Reset mandate
+                startDegreesRound();
+            });
+        }
+    }
+
+    /* --- Utilities --- */
+
+    function switchView(viewName) {
+        state.currentView = viewName;
+        Object.values(views).forEach(el => el.classList.add('hidden'));
+        views[viewName].classList.remove('hidden');
+    }
+
+    function showSuccess(msg, callback, duration = 1000) {
+        state.isProcessing = true;
+        const el = feedbackEls.success;
+        el.innerText = msg;
+        el.classList.add('visible');
+        setTimeout(() => {
+            el.classList.remove('visible');
+            state.isProcessing = false;
+            if (callback) callback();
+        }, duration);
+    }
+
+    function showError(msg, callback, duration = 1000) {
+        state.isProcessing = true;
+        const el = feedbackEls.error;
+        el.innerText = msg;
+        el.classList.add('visible');
+        setTimeout(() => {
+            el.classList.remove('visible');
+            state.isProcessing = false;
+            if (callback) callback();
+        }, duration);
+    }
+
+    // Helper to give rough Hebrew name for Root Note (Simplification)
+    function nameToHebrew(noteVal) {
+        // noteVal 0-11
+        // Mapping Logic:
+        // 0: C, 1: C#/Db, 2: D...
+        const map = {
+            0: "דו", 1: "דו# / רהb", 2: "רה", 3: "מיb", 4: "מי",
+            5: "פה", 6: "פה# / סולb", 7: "סול", 8: "להb", 9: "לה",
+            10: "סיb", 11: "סי / דוb"
+        };
+        return map[noteVal] || "?";
+    }
+
+</script>
+
+</body>
+</html>
