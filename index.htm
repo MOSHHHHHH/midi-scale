@@ -154,6 +154,29 @@
             font-weight: bold;
             margin: 1rem 0;
         }
+        
+        .settings-container {
+            margin: 1.5rem 0;
+            text-align: right;
+            background: #f1f5f9;
+            padding: 1rem;
+            border-radius: 0.5rem;
+            width: 100%;
+        }
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.5rem;
+        }
+        .setting-row input {
+            width: 60px;
+            padding: 5px;
+            border: 1px solid #cbd5e1;
+            border-radius: 4px;
+            text-align: center;
+            font-size: 1rem;
+        }
     </style>
 </head>
 <body>
@@ -167,6 +190,19 @@
     <div id="view-home">
         <h1>תרגול סולמות בפסנתר</h1>
         <p>אפליקציה לתרגול סולמות מז'וריים ומינוריים באמצעות מקלדת MIDI.</p>
+        
+        <!-- שינוי: הוספת הגדרות חזרות -->
+        <div class="settings-container">
+            <div class="setting-row">
+                <label for="input-full-reps">חזרות סולם מלא:</label>
+                <input type="number" id="input-full-reps" value="4" min="1">
+            </div>
+            <div class="setting-row">
+                <label for="input-degrees-reps">חזרות דרגות:</label>
+                <input type="number" id="input-degrees-reps" value="2" min="1">
+            </div>
+        </div>
+
         <p>ודאו שהפסנתר מחובר למחשב לפני ההתחלה.</p>
         <button id="btn-start" class="btn">התחל אימון</button>
         <div class="copyright">
@@ -184,10 +220,10 @@
 
     <!-- View: Root Practice -->
     <div id="view-root" class="hidden">
-        <h2>תרגול תו בסיס (Root)</h2>
+        <h2>זהה את הסולם</h2>
         <div id="root-instruction" class="note-display"></div>
         <img id="root-img" class="scale-img" src="" alt="Scale Signature">
-        <p>נגנו את תו הבסיס של הסולם המוצג.</p>
+        <p>נגנו את תו הבסיס (השורש) של הסולם.</p>
     </div>
 
     <!-- View: Full Scale Practice -->
@@ -241,7 +277,7 @@
     const MAJOR_INTERVALS = [0, 2, 4, 5, 7, 9, 11];
     const MINOR_INTERVALS = [0, 2, 3, 5, 7, 8, 10]; // Natural minor
 
-    // Hebrew names for Root display
+    // Hebrew names for Root display (used only after identification)
     const NOTE_NAMES_HE = ["דו", "דו דיאז / רה במול", "רה", "מי במול", "מי", "פה", "פה דיאז / סול במול", "סול", "לה במול", "לה", "סי במול", "סי"];
 
     /* --- App State --- */
@@ -384,7 +420,8 @@
 
     /* --- Task: Root --- */
     function setupRootView() {
-        const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
+        // שינוי 1: לא מציגים את שם התו, רק את התמונה וסוג הסולם
+        const title = `איזה סולם זה? (${state.currentScale.typeStr})`;
         document.getElementById('root-instruction').innerText = title;
         document.getElementById('root-img').src = state.currentScale.img;
         switchView('root');
@@ -400,7 +437,10 @@
 
     /* --- Task: Full Scale --- */
     function setupFullScaleView() {
-        state.fullScale.repsLeft = 4;
+        // שינוי 2: קריאת מספר החזרות מהקלט
+        const repsInput = parseInt(document.getElementById('input-full-reps').value);
+        state.fullScale.repsLeft = (repsInput && repsInput > 0) ? repsInput : 4;
+        
         resetFullScaleRound();
         
         const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
@@ -442,7 +482,8 @@
         } else {
             // Wrong note
             showError("טעות, נסה שוב", () => {
-                state.fullScale.repsLeft = 4; // Reset attempts requirement? Prompt says "User will need to play the scale 4 times from the beginning"
+                const repsInput = parseInt(document.getElementById('input-full-reps').value);
+                state.fullScale.repsLeft = (repsInput && repsInput > 0) ? repsInput : 4;
                 resetFullScaleRound();
                 updateFullScaleUI();
             });
@@ -451,7 +492,10 @@
 
     /* --- Task: Specific Degrees --- */
     function setupDegreesView() {
-        state.degrees.repsLeft = 2;
+        // שינוי 2: קריאת מספר החזרות מהקלט
+        const repsInput = parseInt(document.getElementById('input-degrees-reps').value);
+        state.degrees.repsLeft = (repsInput && repsInput > 0) ? repsInput : 2;
+
         const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
         document.getElementById('scale-title-degrees').innerText = title;
         startDegreesRound();
@@ -490,11 +534,7 @@
     }
 
     function checkDegreesTask(note) {
-        // Determine expected note based on degree
-        // Degree 1 = Index 0 in state.scaleNotes (which is sorted? No, need to sort or calculate)
-        
         // Strategy: state.scaleNotes was generated via intervals.
-        // For Major/Minor intervals, they are always ascending in pitch order relative to root.
         // So index 0 = Degree 1 (Root), Index 1 = Degree 2, etc.
         
         const currentTargetDegree = state.degrees.sequence[state.degrees.currentIndex];
@@ -513,14 +553,16 @@
                         startDegreesRound();
                     }, 800);
                 } else {
-                    showSuccess("כל הכבוד!", () => {
-                        switchView('home');
+                    // שינוי 3: במקום לחזור לבית, עוברים מיד לסולם הבא
+                    showSuccess("כל הכבוד! עובר לסולם הבא...", () => {
+                        generateNewTask();
                     });
                 }
             }
         } else {
             showError("טעות, נסה שוב", () => {
-                state.degrees.repsLeft = 2; // Reset mandate
+                const repsInput = parseInt(document.getElementById('input-degrees-reps').value);
+                state.degrees.repsLeft = (repsInput && repsInput > 0) ? repsInput : 2;
                 startDegreesRound();
             });
         }
