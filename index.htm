@@ -662,29 +662,43 @@
         document.getElementById('chords-status').innerText = "נגן את האקורד";
     }
 
-    function checkChordsTask(note) {
-        // הוספת התו לסט התווים הלחוצים כרגע
-        state.chords.pressedNotes.add(note);
-        
-        // בדיקה האם כל 3 תווי המטרה נמצאים בתוך הסט הלחוץ
-        const allNotesPressed = state.chords.targetNotes.every(target => 
-            state.chords.pressedNotes.has(target)
-        );
-
-        if (allNotesPressed) {
-            state.chords.repsLeft--;
+function checkChordsTask(note) {
+    // בדיקה אם התו שנלחץ שייך לאקורד המבוקש
+    if (!state.chords.targetNotes.includes(note)) {
+        // תו שגוי - הצגת שגיאה ואיפוס
+        showError("טעות, נסה שוב", () => {
+            // איפוס מספר החזרות למצב ההתחלתי
+            const repsInput = parseInt(document.getElementById('input-chords-reps').value);
+            state.chords.repsLeft = (repsInput && repsInput > 0) ? repsInput : 3;
             
-            if (state.chords.repsLeft > 0) {
-                showSuccess("מצוין!", () => {
-                    generateRandomChord();
-                }, 600);
-            } else {
-                showSuccess("סיימת את הסולם בהצלחה!", () => {
-                     generateNewTask();
-                });
-            }
+            // ייצור אקורד חדש והתחלה מחדש
+            generateRandomChord();
+        });
+        return; // יציאה מהפונקציה
+    }
+    
+    // אם התו נכון - הוספה לסט
+    state.chords.pressedNotes.add(note);
+    
+    // בדיקה אם כל 3 התווים הנכונים נלחצו
+    const allNotesPressed = state.chords.targetNotes.every(target => 
+        state.chords.pressedNotes.has(target)
+    );
+
+    if (allNotesPressed) {
+        state.chords.repsLeft--;
+        
+        if (state.chords.repsLeft > 0) {
+            showSuccess("מצוין!", () => {
+                generateRandomChord();
+            }, 600);
+        } else {
+            showSuccess("סיימת את הסולם בהצלחה!", () => {
+                 generateNewTask();
+            });
         }
     }
+}
 
     /* --- Utilities --- */
 
