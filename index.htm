@@ -169,8 +169,9 @@
             align-items: center;
             margin-bottom: 0.5rem;
         }
-        .setting-row input {
-            width: 60px;
+        .setting-row input, .setting-row select {
+            width: auto;
+            min-width: 60px;
             padding: 5px;
             border: 1px solid #cbd5e1;
             border-radius: 4px;
@@ -191,8 +192,16 @@
         <h1>תרגול סולמות בפסנתר</h1>
         <p>אפליקציה לתרגול סולמות מז'וריים ומינוריים באמצעות מקלדת MIDI.</p>
         
-        <!-- שינוי: הוספת הגדרות חזרות -->
+        <!-- הגדרות -->
         <div class="settings-container">
+            <div class="setting-row">
+                <label for="input-difficulty">רמת קושי:</label>
+                <select id="input-difficulty">
+                    <option value="1">קל (עד 2 סימני היתק)</option>
+                    <option value="2" selected>בינוני (עד 4 סימני היתק)</option>
+                    <option value="3">קשה (כל הסולמות)</option>
+                </select>
+            </div>
             <div class="setting-row">
                 <label for="input-full-reps">חזרות סולם מלא:</label>
                 <input type="number" id="input-full-reps" value="4" min="1">
@@ -200,6 +209,10 @@
             <div class="setting-row">
                 <label for="input-degrees-reps">חזרות דרגות:</label>
                 <input type="number" id="input-degrees-reps" value="2" min="1">
+            </div>
+            <div class="setting-row">
+                <label for="input-chords-reps">חזרות אקורדים:</label>
+                <input type="number" id="input-chords-reps" value="3" min="1">
             </div>
         </div>
 
@@ -250,27 +263,46 @@
         </div>
     </div>
 
+    <!-- View: Chords Practice -->
+    <div id="view-chords" class="hidden">
+        <h2>תרגול אקורדים (I, IV, V)</h2>
+        <h3 id="scale-title-chords"></h3>
+        <p>נגנו את האקורד המוצג (3 צלילים ביחד).</p>
+        
+        <div id="chord-display" class="degree-box active" style="width: 100px; height: 100px; margin: 2rem auto; font-size: 2.5rem;">
+            <!-- Chord Name Here -->
+        </div>
+
+        <div class="status-text" id="chords-status"></div>
+        <div style="margin-top: 10px; font-size: 0.9rem; color: #64748b;">
+            חזרות שנותרו: <span id="chords-reps"></span>
+        </div>
+    </div>
+
 </div>
 
 <script>
     /* --- Data & Constants --- */
     // Note mapping: C=0, C#=1, D=2...
+    // Difficulty: 1 (Easy/0-2), 2 (Medium/3-4), 3 (Hard/5+)
     const SCALES_DATA = [
-        { name: "A-flat Major", root: 8, img: "Key_Signature_A-flat_major.jpg" },
-        { name: "A Major", root: 9, img: "Key_Signature_A_major.jpg" },
-        { name: "B-flat Major", root: 10, img: "Key_Signature_B-flat_major.jpg" },
-        { name: "B Major", root: 11, img: "Key_Signature_B_major.jpg" },
-        { name: "C-flat Major", root: 11, img: "Key_Signature_C-flat_major.jpg" }, // Enharmonic B
-        { name: "C Major", root: 0, img: "Key_Signature_C_major.jpg" },
-        { name: "D-flat Major", root: 1, img: "Key_Signature_D-flat_major.jpg" }, // Enharmonic C#
-        { name: "C-sharp Major", root: 1, img: "Key_Signature_of_C-sharp_major.jpg" },
-        { name: "D Major", root: 2, img: "Key_Signature_D_major.jpg" },
-        { name: "E-flat Major", root: 3, img: "Key_Signature_E-flat_major.jpg" },
-        { name: "E Major", root: 4, img: "Key_Signature_E_major.jpg" },
-        { name: "F-sharp Major", root: 6, img: "Key_Signature_F-sharp_major.jpg" },
-        { name: "F Major", root: 5, img: "Key_Signature_F_major.jpg" },
-        { name: "G-flat Major", root: 6, img: "Key_Signature_G-flat_major.jpg" }, // Enharmonic F#
-        { name: "G Major", root: 7, img: "Key_Signature_G_major.jpg" }
+        { name: "C Major", root: 0, img: "Key_Signature_C_major.jpg", difficulty: 1 },
+        { name: "F Major", root: 5, img: "Key_Signature_F_major.jpg", difficulty: 1 }, // 1 Flat
+        { name: "G Major", root: 7, img: "Key_Signature_G_major.jpg", difficulty: 1 }, // 1 Sharp
+        { name: "B-flat Major", root: 10, img: "Key_Signature_B-flat_major.jpg", difficulty: 1 }, // 2 Flats
+        { name: "D Major", root: 2, img: "Key_Signature_D_major.jpg", difficulty: 1 }, // 2 Sharps
+
+        { name: "E-flat Major", root: 3, img: "Key_Signature_E-flat_major.jpg", difficulty: 2 }, // 3 Flats
+        { name: "A Major", root: 9, img: "Key_Signature_A_major.jpg", difficulty: 2 }, // 3 Sharps
+        { name: "A-flat Major", root: 8, img: "Key_Signature_A-flat_major.jpg", difficulty: 2 }, // 4 Flats
+        { name: "E Major", root: 4, img: "Key_Signature_E_major.jpg", difficulty: 2 }, // 4 Sharps
+
+        { name: "D-flat Major", root: 1, img: "Key_Signature_D-flat_major.jpg", difficulty: 3 }, // 5 Flats
+        { name: "B Major", root: 11, img: "Key_Signature_B_major.jpg", difficulty: 3 }, // 5 Sharps
+        { name: "G-flat Major", root: 6, img: "Key_Signature_G-flat_major.jpg", difficulty: 3 }, // 6 Flats
+        { name: "F-sharp Major", root: 6, img: "Key_Signature_F-sharp_major.jpg", difficulty: 3 }, // 6 Sharps
+        { name: "C-flat Major", root: 11, img: "Key_Signature_C-flat_major.jpg", difficulty: 3 }, // 7 Flats
+        { name: "C-sharp Major", root: 1, img: "Key_Signature_of_C-sharp_major.jpg", difficulty: 3 } // 7 Sharps
     ];
 
     // Intervals from root
@@ -282,7 +314,7 @@
 
     /* --- App State --- */
     const state = {
-        currentView: 'home', // home, midi-setup, root, full-scale, degrees
+        currentView: 'home', // home, midi-setup, root, full-scale, degrees, chords
         currentScale: null, // Object with {root, type, img, name}
         scaleNotes: [], // Set of allowed note values (0-11)
         
@@ -296,6 +328,12 @@
             currentIndex: 0,
             repsLeft: 2
         },
+        chords: {
+            currentChordName: "",
+            targetNotes: [], // array of 3 notes
+            pressedNotes: new Set(), // accumulation of pressed keys
+            repsLeft: 3
+        },
         
         isProcessing: false // Lock input during feedback
     };
@@ -306,7 +344,8 @@
         midiSetup: document.getElementById('view-midi-setup'),
         root: document.getElementById('view-root'),
         fullScale: document.getElementById('view-full-scale'),
-        degrees: document.getElementById('view-degrees')
+        degrees: document.getElementById('view-degrees'),
+        chords: document.getElementById('view-chords')
     };
 
     const feedbackEls = {
@@ -375,12 +414,22 @@
             case 'degrees':
                 checkDegreesTask(note);
                 break;
+            
+            case 'chords':
+                checkChordsTask(note);
+                break;
         }
     }
 
     function generateNewTask() {
-        // 1. Pick random scale from data
-        const baseScale = SCALES_DATA[Math.floor(Math.random() * SCALES_DATA.length)];
+        // קריאת רמת הקושי
+        const difficulty = parseInt(document.getElementById('input-difficulty').value) || 2;
+
+        // סינון סולמות לפי רמה
+        const filteredScales = SCALES_DATA.filter(s => s.difficulty <= difficulty);
+        
+        // בחירה אקראית מתוך הרשימה המסוננת
+        const baseScale = filteredScales[Math.floor(Math.random() * filteredScales.length)];
         
         // 2. Decide Major or Minor (50/50)
         const isMajor = Math.random() > 0.5;
@@ -420,7 +469,6 @@
 
     /* --- Task: Root --- */
     function setupRootView() {
-        // שינוי 1: לא מציגים את שם התו, רק את התמונה וסוג הסולם
         const title = `איזה סולם זה? (${state.currentScale.typeStr})`;
         document.getElementById('root-instruction').innerText = title;
         document.getElementById('root-img').src = state.currentScale.img;
@@ -437,7 +485,6 @@
 
     /* --- Task: Full Scale --- */
     function setupFullScaleView() {
-        // שינוי 2: קריאת מספר החזרות מהקלט
         const repsInput = parseInt(document.getElementById('input-full-reps').value);
         state.fullScale.repsLeft = (repsInput && repsInput > 0) ? repsInput : 4;
         
@@ -492,7 +539,6 @@
 
     /* --- Task: Specific Degrees --- */
     function setupDegreesView() {
-        // שינוי 2: קריאת מספר החזרות מהקלט
         const repsInput = parseInt(document.getElementById('input-degrees-reps').value);
         state.degrees.repsLeft = (repsInput && repsInput > 0) ? repsInput : 2;
 
@@ -553,9 +599,9 @@
                         startDegreesRound();
                     }, 800);
                 } else {
-                    // שינוי 3: במקום לחזור לבית, עוברים מיד לסולם הבא
-                    showSuccess("כל הכבוד! עובר לסולם הבא...", () => {
-                        generateNewTask();
+                    // המעבר לסולמות עודכן למעבר לאקורדים
+                    showSuccess("כל הכבוד! עובר לאקורדים...", () => {
+                        setupChordsView();
                     });
                 }
             }
@@ -565,6 +611,78 @@
                 state.degrees.repsLeft = (repsInput && repsInput > 0) ? repsInput : 2;
                 startDegreesRound();
             });
+        }
+    }
+
+    /* --- Task: Chords --- */
+    function setupChordsView() {
+        const repsInput = parseInt(document.getElementById('input-chords-reps').value);
+        state.chords.repsLeft = (repsInput && repsInput > 0) ? repsInput : 3;
+
+        const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
+        document.getElementById('scale-title-chords').innerText = title;
+        
+        generateRandomChord();
+        switchView('chords');
+    }
+
+    function generateRandomChord() {
+        // בחירת אקורד אקראי: I, IV, V (דרגות 1, 4, 5)
+        const options = [1, 4, 5]; 
+        const degree = options[Math.floor(Math.random() * options.length)];
+        
+        // חישוב התווים של האקורד (טריאד) מתוך תווי הסולם
+        // דרגה 1: אינדקסים 0, 2, 4
+        // דרגה 4: אינדקסים 3, 5, 0
+        // דרגה 5: אינדקסים 4, 6, 1
+        
+        // המרת דרגה לאינדקס בסיס (0-based)
+        const rootIndex = degree - 1; 
+        
+        // לקיחת התווים המודאליים (לפי הסולם הנוכחי)
+        const n1 = state.scaleNotes[rootIndex];
+        const n2 = state.scaleNotes[(rootIndex + 2) % 7];
+        const n3 = state.scaleNotes[(rootIndex + 4) % 7];
+        
+        state.chords.targetNotes = [n1, n2, n3];
+        
+        // קביעת שם האקורד לתצוגה
+        const roman = degree === 1 ? 'I' : (degree === 4 ? 'IV' : 'V');
+        state.chords.currentChordName = roman;
+        
+        // איפוס קלט המשתמש
+        state.chords.pressedNotes.clear();
+        
+        updateChordsUI();
+    }
+
+    function updateChordsUI() {
+        document.getElementById('chord-display').innerText = state.chords.currentChordName;
+        document.getElementById('chords-reps').innerText = state.chords.repsLeft;
+        document.getElementById('chords-status').innerText = "נגן את האקורד";
+    }
+
+    function checkChordsTask(note) {
+        // הוספת התו לסט התווים הלחוצים כרגע
+        state.chords.pressedNotes.add(note);
+        
+        // בדיקה האם כל 3 תווי המטרה נמצאים בתוך הסט הלחוץ
+        const allNotesPressed = state.chords.targetNotes.every(target => 
+            state.chords.pressedNotes.has(target)
+        );
+
+        if (allNotesPressed) {
+            state.chords.repsLeft--;
+            
+            if (state.chords.repsLeft > 0) {
+                showSuccess("מצוין!", () => {
+                    generateRandomChord();
+                }, 600);
+            } else {
+                showSuccess("סיימת את הסולם בהצלחה!", () => {
+                     generateNewTask();
+                });
+            }
         }
     }
 
