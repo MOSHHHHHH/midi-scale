@@ -548,18 +548,24 @@
         switchView('degrees');
     }
 
-    function startDegreesRound() {
-        // Create random permutation of 1-7
-        const nums = [1, 2, 3, 4, 5, 6, 7];
+function startDegreesRound() {
+        // יצירת רשימה: כל המספרים מופיעים פעמיים (למעט 1 שמופיע פעם אחת ברשימה הראשונית)
+        // הסיבה: ה-1 השני יתווסף ידנית לסוף הרשימה כדי להבטיח סיום ב-1
+        const nums = [1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7];
+
+        // ערבוב (Shuffle) של הרשימה
         for (let i = nums.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [nums[i], nums[j]] = [nums[j], nums[i]];
         }
+
+        // דרישה: הדרגה האחרונה היא תמיד 1
+        nums.push(1);
+
         state.degrees.sequence = nums;
         state.degrees.currentIndex = 0;
         renderDegreesUI();
     }
-
     function renderDegreesUI() {
         const container = document.getElementById('degrees-container');
         container.innerHTML = '';
@@ -614,10 +620,14 @@
         }
     }
 
-    /* --- Task: Chords --- */
-    function setupChordsView() {
+function setupChordsView() {
         const repsInput = parseInt(document.getElementById('input-chords-reps').value);
         state.chords.repsLeft = (repsInput && repsInput > 0) ? repsInput : 3;
+        
+        // שמירת סך החזרות המקורי (כדי לזהות את הסיבוב הראשון)
+        state.chords.totalReps = state.chords.repsLeft;
+        // איפוס זיכרון האקורד הקודם
+        state.chords.lastDegree = null;
 
         const title = `סולם ${nameToHebrew(state.currentScale.root)} ${state.currentScale.typeStr}`;
         document.getElementById('scale-title-chords').innerText = title;
@@ -626,28 +636,46 @@
         switchView('chords');
     }
 
-    function generateRandomChord() {
-        // בחירת אקורד אקראי: I, IV, V (דרגות 1, 4, 5)
-        const options = [1, 4, 5]; 
-        const degree = options[Math.floor(Math.random() * options.length)];
+function generateRandomChord() {
+        let degree;
         
-        // חישוב התווים של האקורד (טריאד) מתוך תווי הסולם
-        // דרגה 1: אינדקסים 0, 2, 4
-        // דרגה 4: אינדקסים 3, 5, 0
-        // דרגה 5: אינדקסים 4, 6, 1
+        // בדיקה: האם זה האקורד הראשון (לפי סך החזרות) או האחרון (נשאר 1)?
+        // אם כן - מכריחים את דרגה 1
+        const isFirst = (state.chords.repsLeft === state.chords.totalReps);
+        const isLast = (state.chords.repsLeft === 1);
+
+        if (isFirst || isLast) {
+            degree = 1; 
+        } else {
+            // אפשרויות בחירה: הוספנו את 6 (VI) לרשימה
+            const options = [1, 4, 5, 6];
+            
+            // מניעת כפילות ברצף: מסננים החוצה את הדרגה שניגנו הרגע
+            const available = options.filter(d => d !== state.chords.lastDegree);
+            
+            // בחירה אקראית מהאפשרויות שנותרו
+            degree = available[Math.floor(Math.random() * available.length)];
+        }
         
+        // שמירת הדרגה הנוכחית לסיבוב הבא
+        state.chords.lastDegree = degree;
+        
+        // --- חישוב התווים (לוגיקה מקורית נשמרת, היא עובדת גם עבור דרגה 6) ---
         // המרת דרגה לאינדקס בסיס (0-based)
         const rootIndex = degree - 1; 
         
-        // לקיחת התווים המודאליים (לפי הסולם הנוכחי)
         const n1 = state.scaleNotes[rootIndex];
         const n2 = state.scaleNotes[(rootIndex + 2) % 7];
         const n3 = state.scaleNotes[(rootIndex + 4) % 7];
         
         state.chords.targetNotes = [n1, n2, n3];
         
-        // קביעת שם האקורד לתצוגה
-        const roman = degree === 1 ? 'I' : (degree === 4 ? 'IV' : 'V');
+        // קביעת שם האקורד לתצוגה - הוספת התמיכה ב-VI
+        let roman = 'I';
+        if (degree === 4) roman = 'IV';
+        if (degree === 5) roman = 'V';
+        if (degree === 6) roman = 'VI';
+
         state.chords.currentChordName = roman;
         
         // איפוס קלט המשתמש
@@ -655,7 +683,6 @@
         
         updateChordsUI();
     }
-
     function updateChordsUI() {
         document.getElementById('chord-display').innerText = state.chords.currentChordName;
         document.getElementById('chords-reps').innerText = state.chords.repsLeft;
