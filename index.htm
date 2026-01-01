@@ -596,7 +596,7 @@ function startDegreesRound() {
             state.degrees.currentIndex++;
             renderDegreesUI();
 
-            if (state.degrees.currentIndex >= 7) {
+            if (state.degrees.currentIndex >= state.degrees.sequence.length) {
                 // Round complete
                 state.degrees.repsLeft--;
                 
